@@ -202,3 +202,106 @@ passport.deserializeUser(User.deserializeUser()); // crumble cookie to find info
 ```
 
 ## Level 6 Security: OAuth2.0 and implement sign in using Google
+
+authenticate user from big tech company user data </br>
+npm install passport-google-oauth20 </br>
+
+add package on app.js </br>
+```javascript
+const GoogleStrategy = require('passport-google-oauth20').Strategy;
+```
+
+add strategy</br>
+download npm i mongoose-findorcreate to use findOrCreate function </br>
+```javascript
+const findOrCreate = require("mongoose-findorcreate"); // add on top
+...
+userSchema.plugin(findOrCreate); // add plugin
+...
+passport.use(new GoogleStrategy({
+    clientID: process.env.CLIENT_ID,
+    clientSecret: process.env.CLIENT_SECRET,
+    callbackURL: "http://localhost:3000/auth/google/secrets"
+  },
+  function(accessToken, refreshToken, profile, cb) {
+    User.findOrCreate({ googleId: profile.id }, function (err, user) {
+      return cb(err, user);
+    });
+  }
+));
+...
+// create APIs for authentication through google
+app.get("/auth/google",
+  passport.authenticate("google", { scope: ["profile"] }));
+
+  app.get("/auth/google/secrets", 
+  passport.authenticate("google", { failureRedirect: "/login" }),
+  function(req, res) {
+    // Successful authentication, redirect to secrets.
+    res.redirect("/secrets");
+  });
+```
+
+add google authorization login button in login and register </br>
+```html
+    <div class="col-sm-4">
+      <div class="card social-block">
+        <div class="card-body">
+          <a class="btn btn-block" href="/auth/google" role="button">
+            <i class="fab fa-google"></i>
+            Sign Up with Google
+          </a>
+        </div>
+      </div>
+    </div>
+```
+
+change serializer and deserializer to work for all strategies</br>
+```javascript
+passport.serializeUser(function(user, done){
+    done(null, user.id);
+}); // create cookie and add user identification info
+passport.deserializeUser(function(id, done){
+    User.findById(id, function(err, user){
+        done(err,user);
+    });
+});
+```
+
+provided profile info</br>
+```javascript
+{
+  id: '',
+  displayName: '',
+  name: { familyName: '', givenName: '' },
+  photos: [
+    {
+      value: ''
+    }
+  ],
+  provider: '',
+  _raw: '{\n' +
+    '  "sub": "",\n' +
+    '  "name": "",\n' +
+    '  "given_name": "",\n' +
+    '  "picture": "",\n' +
+    '  "locale": ""\n' +
+    '}',
+  _json: {
+    sub: '',
+    name: '',
+    given_name: '',
+    picture: '',
+    locale: ''
+  }
+}
+```
+add googleId in userSchema to save googleId in db</br>
+
+add social button boostrap in header.ejs to make button look more legit</br>
+```html
+<!--header file-->
+  <link rel="stylesheet" href="css/bootstrap-social.css">
+<!--login and register file-->
+  <a class="btn btn-block btn-social btn-google" href="/auth/google" role="button">
+```
